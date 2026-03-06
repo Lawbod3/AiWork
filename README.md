@@ -1,6 +1,6 @@
 # Backend Engineering Assessment Starter
 
-This repository is a standalone starter for a backend engineering take-home assessment.
+This repository is a standalone starter for the backend engineering take-home assessment.
 It contains two independent services in a shared mono-repo:
 
 - `python-service/` (InsightOps): FastAPI + SQLAlchemy + manual SQL migrations
@@ -38,4 +38,3 @@ This starts PostgreSQL on `localhost:5432` with:
 
 - Keep your solution focused on the assessment tasks.
 - Do not replace the project structure with a different architecture.
-- See [spec.md](spec.md) for task boundaries and what remains intentionally unimplemented.
