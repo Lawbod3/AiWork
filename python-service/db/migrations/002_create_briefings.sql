@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS briefings (
-  id SERIAL PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   company_name VARCHAR(255) NOT NULL,
   ticker VARCHAR(10) NOT NULL,
   sector VARCHAR(255) NOT NULL,
@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS briefings (
   summary TEXT NOT NULL,
   recommendation TEXT NOT NULL,
   html_content TEXT,
-  generated_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  generated_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_briefings_ticker ON briefings(ticker);
