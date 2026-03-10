@@ -3,7 +3,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+def to_camel_case(snake_str: str) -> str:
+    """Convert snake_case to camelCase."""
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.capitalize() for x in components[1:])
+
+
 class MetricCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel_case)
+
     name: str = Field(min_length=1, max_length=255)
     value: str = Field(min_length=1, max_length=255)
 
@@ -18,6 +26,8 @@ class MetricRead(BaseModel):
 
 
 class KeyPointCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel_case)
+
     text: str = Field(min_length=1, max_length=1000)
 
 
@@ -30,6 +40,8 @@ class KeyPointRead(BaseModel):
 
 
 class RiskCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel_case)
+
     text: str = Field(min_length=1, max_length=1000)
 
 
@@ -42,6 +54,8 @@ class RiskRead(BaseModel):
 
 
 class BriefingCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel_case)
+
     company_name: str = Field(min_length=1, max_length=255)
     ticker: str = Field(min_length=1, max_length=10)
     sector: str = Field(min_length=1, max_length=255)

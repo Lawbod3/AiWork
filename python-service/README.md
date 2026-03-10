@@ -73,13 +73,67 @@ source .venv/bin/activate
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-## Run Tests
+## Testing
+
+### Test Coverage
+
+The briefing feature has comprehensive test coverage with **38 passing tests** organized into 4 test suites:
+
+- **TestBriefingService** (13 tests) - Tests all service layer operations (create, retrieve, list, update)
+- **TestReportFormatter** (7 tests) - Tests data transformation and formatting logic
+- **TestBriefingAPI** (11 tests) - Tests all 4 API endpoints with success and error cases
+- **TestBriefingValidation** (7 tests) - Tests schema validation and business rules
+
+All tests pass with no failures.
+
+### Run Tests
 
 ```bash
 cd python-service
 source .venv/bin/activate
 python -m pytest
 ```
+
+Run tests with verbose output:
+
+```bash
+python -m pytest -v
+```
+
+Run specific test file:
+
+```bash
+python -m pytest tests/test_briefings.py -v
+```
+
+Run specific test class:
+
+```bash
+python -m pytest tests/test_briefings.py::TestBriefingService -v
+```
+
+Run specific test:
+
+```bash
+python -m pytest tests/test_briefings.py::TestBriefingService::test_create_briefing_success -v
+```
+
+Run with coverage report:
+
+```bash
+python -m pytest --cov=app tests/
+```
+
+### Testing Approach
+
+The test suite covers the full stack:
+
+- **Service Layer** - Tests business logic in isolation with mocked database
+- **Formatter Layer** - Tests data transformation and normalization
+- **API Layer** - Tests endpoints with real HTTP requests and database
+- **Validation** - Tests schema validators and business rule enforcement
+
+Each test is focused and tests one thing well. Tests use fixtures for setup, making them easy to read and maintain. The suite catches regressions early and documents how the feature is supposed to work.
 
 ## Project Layout
 
@@ -181,6 +235,12 @@ The feature follows a layered architecture:
 
 
 ## Design & Implementation
+
+### Testing Philosophy
+
+I built this feature with testing in mind from the start. The layered architecture makes it easy to test each piece independently - you can test the service without hitting the database, test the formatter without the API, test the API without worrying about implementation details. The test suite isn't just about coverage numbers; it's about confidence. When you run the tests and they all pass, you know the feature works end-to-end.
+
+The 38 tests are organized by what they test - service operations, data formatting, API endpoints, and validation rules. This makes it easy to find tests when you're debugging or adding features. Each test is small and focused, testing one behavior at a time. If a test fails, you know exactly what broke.
 
 ### Why Manual Migrations Over Alembic?
 
