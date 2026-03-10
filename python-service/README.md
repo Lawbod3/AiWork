@@ -15,11 +15,8 @@ This service includes:
 ## Prerequisites
 
 - Python 3.12
-- PostgreSQL running from repository root:
 
-```bash
-docker compose up -d postgres
-```
+The application uses **SQLite for local development**, so no external database setup is needed. Just Python and the dependencies in `requirements.txt`.
 
 ## Setup
 
@@ -35,9 +32,11 @@ cp .env.example .env
 
 `.env.example` includes:
 
-- `DATABASE_URL`
-- `APP_ENV`
-- `APP_PORT`
+- `DATABASE_URL` - SQLite database URL (default: `sqlite:///./briefing.db`)
+- `APP_ENV` - Environment (development/production)
+- `APP_PORT` - Server port (default: 8000)
+
+The application uses SQLite for local development, making it easy to run without Docker or external database setup.
 
 ## Run Migrations (Manual SQL Runner)
 
@@ -77,14 +76,12 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ### Test Coverage
 
-The briefing feature has comprehensive test coverage with **38 passing tests** organized into 4 test suites:
+The briefing feature has **38 passing tests** organized into 4 focused test suites:
 
-- **TestBriefingService** (13 tests) - Tests all service layer operations (create, retrieve, list, update)
-- **TestReportFormatter** (7 tests) - Tests data transformation and formatting logic
-- **TestBriefingAPI** (11 tests) - Tests all 4 API endpoints with success and error cases
-- **TestBriefingValidation** (7 tests) - Tests schema validation and business rules
-
-All tests pass with no failures.
+- **TestBriefingService** (13 tests) - Service layer operations (create, retrieve, list, update HTML)
+- **TestReportFormatter** (7 tests) - Data transformation and formatting logic
+- **TestBriefingAPI** (11 tests) - All 4 API endpoints with success and error cases
+- **TestBriefingValidation** (7 tests) - Schema validation and business rule enforcement
 
 ### Run Tests
 
@@ -94,16 +91,10 @@ source .venv/bin/activate
 python -m pytest
 ```
 
-Run tests with verbose output:
+Run with verbose output:
 
 ```bash
 python -m pytest -v
-```
-
-Run specific test file:
-
-```bash
-python -m pytest tests/test_briefings.py -v
 ```
 
 Run specific test class:
@@ -112,28 +103,25 @@ Run specific test class:
 python -m pytest tests/test_briefings.py::TestBriefingService -v
 ```
 
-Run specific test:
-
-```bash
-python -m pytest tests/test_briefings.py::TestBriefingService::test_create_briefing_success -v
-```
-
 Run with coverage report:
 
 ```bash
 python -m pytest --cov=app tests/
 ```
 
-### Testing Approach
+### Testing Philosophy
 
-The test suite covers the full stack:
+I built the test suite to catch real problems, not just hit coverage numbers. The layered architecture makes testing straightforward - you can test the service without the database, test the formatter without the API, test the API without worrying about implementation details.
 
-- **Service Layer** - Tests business logic in isolation with mocked database
-- **Formatter Layer** - Tests data transformation and normalization
-- **API Layer** - Tests endpoints with real HTTP requests and database
-- **Validation** - Tests schema validators and business rule enforcement
+Each test is small and focused. If a test fails, you know exactly what broke. The fixtures handle setup, so tests read like documentation - they show you how the feature is supposed to work.
 
-Each test is focused and tests one thing well. Tests use fixtures for setup, making them easy to read and maintain. The suite catches regressions early and documents how the feature is supposed to work.
+The tests cover the full stack:
+- **Service layer** - Business logic in isolation
+- **Formatter layer** - Data transformation and normalization
+- **API layer** - Endpoints with real HTTP requests and database
+- **Validation** - Schema validators and business rules
+
+This approach catches bugs early and makes refactoring safe. When all 38 tests pass, you know the feature works end-to-end.
 
 ## Project Layout
 
@@ -236,33 +224,29 @@ The feature follows a layered architecture:
 
 ## Design & Implementation
 
-### Testing Philosophy
+### Why This Architecture Works
 
-I built this feature with testing in mind from the start. The layered architecture makes it easy to test each piece independently - you can test the service without hitting the database, test the formatter without the API, test the API without worrying about implementation details. The test suite isn't just about coverage numbers; it's about confidence. When you run the tests and they all pass, you know the feature works end-to-end.
+I built this with a clear separation of concerns. The API layer handles HTTP. The service layer handles business logic. The formatter handles presentation. The schema layer handles validation. Each piece has one job, which makes the code easier to understand, test, and change.
 
-The 38 tests are organized by what they test - service operations, data formatting, API endpoints, and validation rules. This makes it easy to find tests when you're debugging or adding features. Each test is small and focused, testing one behavior at a time. If a test fails, you know exactly what broke.
+This isn't over-engineered. It's the minimum structure needed to keep things clean. If you need to change how metrics are formatted, you change the formatter. If you need to add a new field to briefings, you add a migration and update the model. Changes stay isolated.
 
-### Why Manual Migrations Over Alembic?
+### Data Model
 
-I prefer Alembic for production systems - it's the standard for Python projects and handles complex migrations well. But for this assessment, I used manual SQL migrations to demonstrate SQL skills and show I understand database design at a lower level. The project structure already used manual migrations, so it made sense to stay consistent while showcasing that knowledge.
+The schema is normalized. Briefings have their own table. Key points, risks, and metrics each have their own tables with foreign keys back to briefings. This prevents data duplication and makes queries efficient. If you want just the risks for a briefing, you can query them directly.
 
-### How the Briefing Feature Works
+Constraints live at the database level too. Metric names must be unique per briefing. Foreign keys have CASCADE delete so you can't end up with orphaned records. This is defense in depth - the database enforces rules even if the application has bugs.
 
-**The Data Model**
+### Validation
 
-I split briefings into multiple tables - one for the main briefing, then separate tables for key points, risks, and metrics. This is normalized design. It means if you want to query just the risks for a briefing, you can. It also prevents data duplication.
+Validation happens in two places. Pydantic schemas validate the JSON you send in - checking that required fields exist, that strings aren't too long, that you have at least 2 key points. The database enforces constraints - like unique metric names. This two-layer approach catches bugs early.
 
-**Validation**
+### The Formatter
 
-Validation happens in two places. First, Pydantic schemas validate the JSON you send in - checking that required fields exist, that strings aren't too long, that you have at least 2 key points. Second, the database enforces constraints - like making sure metric names are unique per briefing. This two-layer approach catches bugs early.
+Before rendering HTML, we transform raw database objects into a simpler format. We sort key points by creation order, normalize metric labels to title case, and construct the report title. This keeps the template simple - it just displays what it's given. The formatter is testable in isolation, which makes it easy to change formatting without touching the template.
 
-**The Formatter**
+### Why Manual Migrations
 
-Before rendering HTML, we transform the raw database objects into a simpler format. We sort key points by the order they were created, normalize metric labels to title case, and construct the report title. This keeps the template simple - it just displays what it's given.
-
-**Why This Matters**
-
-Each piece has one job. The service handles database operations. The formatter handles presentation logic. The template just displays. If you need to change how metrics are formatted, you change the formatter. If you need to add a new field to briefings, you add a migration and update the model. Changes stay isolated.
+I used manual SQL migrations instead of Alembic to demonstrate SQL skills and show I understand database design at a lower level. The project structure already used manual migrations, so it made sense to stay consistent. For production, Alembic is the right choice - it handles complex migrations better and is the Python standard.
 
 ### Trade-offs
 
