@@ -20,25 +20,14 @@ Building an async document intake and LLM-powered summary generation feature.
 
 Recruiters upload candidate documents (resumes, cover letters). The system stores them and generates structured summaries using an LLM, all asynchronously through a queue.
 
-### Project Architecture & Structure
-
-This implementation demonstrates **enterprise-level layered architecture** with clear separation of concerns:
+### Project Structure
 
 ```
 src/
-├── dto/                          # Data Transfer Objects (input/output validation)
-│   └── candidates/               # Feature-scoped DTOs
-│       ├── upload-document.dto.ts
-│       ├── candidate-document.response.ts
-│       └── candidate-summary.response.ts
-├── services/                     # Business logic layer
-│   └── candidates/
-│       └── candidates.service.ts
-├── utils/                        # Shared utilities
-│   └── candidates/
-│       └── mappers/              # Entity-to-DTO transformation
-│           └── candidate.mapper.ts
-├── controllers/                  # HTTP layer (to be added)
+├── dto/candidates/               # Input/output validation
+├── services/candidates/          # Business logic
+├── utils/candidates/mappers/     # Entity transformation
+├── controllers/candidates/       # HTTP endpoints
 ├── entities/                     # Database models
 ├── migrations/                   # Database versioning
 ├── auth/                         # Authentication
@@ -47,83 +36,7 @@ src/
 └── config/                       # Configuration
 ```
 
-**Why this structure?**
-
-1. **Feature-scoped organization** - Each feature (candidates, query, etc.) has its own DTOs, services, and utilities. Easy to find related code.
-
-2. **Layered separation** - Each layer has a single responsibility:
-   - `dto/` - Input validation and response contracts
-   - `services/` - Business logic and data access
-   - `utils/` - Reusable transformations (mappers)
-   - `controllers/` - HTTP handling (coming next)
-
-3. **Scalability** - Adding new services is straightforward:
-   ```
-   src/
-   ├── dto/
-   │   ├── candidates/
-   │   └── query/              # New feature
-   ├── services/
-   │   ├── candidates/
-   │   └── query/              # New feature
-   └── utils/
-       ├── candidates/
-       └── query/              # New feature
-   ```
-
-4. **Testability** - Each layer can be tested independently:
-   - DTOs tested for validation rules
-   - Services tested with mocked dependencies
-   - Mappers tested for transformation logic
-
-5. **Maintainability** - Clear boundaries make code easier to understand and modify.
-
-### Architecture Layers Explained
-
-**DTO Layer** (`src/dto/candidates/`)
-- Validates incoming requests using class-validator decorators
-- Defines response shapes for API contracts
-- Prevents invalid data from reaching business logic
-- Hides internal fields from API responses
-
-**Service Layer** (`src/services/candidates/`)
-- Contains all business logic
-- Enforces workspace access control (multi-tenancy)
-- Manages database operations via repositories
-- Integrates with queue for async processing
-- Handles errors gracefully
-
-**Mapper Layer** (`src/utils/candidates/mappers/`)
-- Transforms database entities to DTOs
-- Handles JSON serialization/deserialization
-- Keeps transformation logic separate from services
-- Reusable across multiple services if needed
-
-**Controller Layer** (coming next)
-- Handles HTTP requests/responses
-- Extracts auth context from headers
-- Calls service methods
-- Returns appropriate HTTP status codes
-
-### Design Decisions
-
-**Why async processing?** Keeps API responsive. Users don't wait for LLM calls.
-
-**Why workspace scoping?** Multi-tenant system. Users can only access their own data.
-
-**Why provider abstraction?** Tests use fake provider (no external API calls). Easy to swap providers later.
-
-**Why separate tables?** Normalized design. Prevents data duplication. Easier to query.
-
-**Why layered architecture?** Enterprise pattern that scales. Each layer has one job. Easy to test, maintain, and extend.
-
-### Database Schema
-
-**candidate_documents** - Stores uploaded documents
-- id, candidate_id, workspace_id, document_type, file_name, storage_key, raw_text, uploaded_at
-
-**candidate_summaries** - Stores generated summaries
-- id, candidate_id, workspace_id, status (pending/completed/failed), score, strengths, concerns, summary, recommended_decision, provider, prompt_version, error_message, created_at, updated_at
+**Why this structure?** Each feature has its own DTOs, services, and utilities. Easy to find related code and add new features.
 
 ### API Endpoints
 
@@ -132,20 +45,16 @@ src/
 - `GET /candidates/:candidateId/summaries` - List summaries
 - `GET /candidates/:candidateId/summaries/:summaryId` - Get single summary
 
-### Implementation Progress
+### Implementation Status
 
-- [x] Database migration (candidate_documents, candidate_summaries tables)
-- [x] TypeORM entities (CandidateDocument, CandidateSummary)
-- [x] TypeORM configuration (register entities and migrations)
-- [x] DTOs (input validation, response shapes)
-- [x] Service layer (business logic, access control)
+- [x] Database migration
+- [x] TypeORM entities
+- [x] DTOs with validation
+- [x] Service layer (business logic, workspace scoping)
 - [x] Mapper layer (entity transformation)
 - [x] Controller (HTTP endpoints)
 - [x] Module (dependency injection)
 - [x] Tests (46 tests passing)
-  - 13 service layer tests
-  - 20 controller layer tests
-  - 13 integration tests (DTO validation)
 - [ ] Worker (async job processing)
 - [ ] LLM provider (Gemini integration)
 
@@ -265,22 +174,10 @@ curl -X GET http://localhost:3000/candidates/cand-123/summaries/summary-id \
 ## Run Tests
 
 ```bash
-cd ts-service
 npm test
 ```
 
-**Test Coverage:**
-- **Service Tests** (13 tests) - Document upload, summary generation, list/retrieve operations, workspace isolation, error handling
-- **Controller Tests** (20 tests) - All 4 HTTP endpoints, auth guard integration, user context passing, error propagation
-- **Integration Tests** (13 tests) - DTO validation at HTTP boundary (@IsEnum, @MinLength, @MaxLength, @IsString), HTTP status codes
-
-All 46 tests pass with proper mocking and isolated dependencies.
-
-## Layout Highlights
-
-- `src/auth/`: fake auth guard, user decorator, auth types
-- `src/entities/`: starter entities
-- `src/sample/`: tiny example module (controller/service/dto)
-- `src/queue/`: in-memory queue abstraction
-- `src/llm/`: provider interface + fake provider
-- `src/migrations/`: TypeORM migration files
+This runs all 46 tests:
+- 13 service tests (upload, summary generation, list/retrieve)
+- 20 controller tests (HTTP endpoints, auth, error handling)
+- 13 integration tests (DTO validation, status codes)
