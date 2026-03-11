@@ -1,0 +1,12 @@
+John Doe
+Software Engineer
+
+Experience:
+- 5 years as full-stack developer
+- Led team of 3 engineers
+- Built microservices architecture
+
+Skills: TypeScript, NestJS, React, PostgreSQL, AWS
+
+Education:
+- BS Computer Science

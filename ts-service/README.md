@@ -54,9 +54,9 @@ src/
 - [x] Mapper layer (entity transformation)
 - [x] Controller (HTTP endpoints)
 - [x] Module (dependency injection)
-- [x] Tests (46 tests passing)
-- [ ] Worker (async job processing)
-- [ ] LLM provider (Gemini integration)
+- [x] Tests (54 tests passing)
+- [x] Worker (async job processing)
+- [x] LLM provider (Gemini integration)
 
 ## Prerequisites
 
@@ -229,6 +229,74 @@ curl -X GET http://localhost:3000/candidates/cand-123/summaries/summary-id \
   -H "x-user-id: user-1" \
   -H "x-workspace-id: workspace-1"
 ```
+
+## End-to-End Testing (With Real Gemini)
+
+To test the complete workflow with real LLM summaries:
+
+1. **Get Gemini API key:**
+   - Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Create a new API key
+   - Copy the key
+
+2. **Configure the service:**
+   ```bash
+   # Add to .env
+   GEMINI_API_KEY=your_api_key_here
+   ```
+
+3. **Start the service:**
+   ```bash
+   npm run start:dev
+   ```
+
+4. **Upload a candidate document:**
+   ```bash
+   curl -X POST http://localhost:3000/candidates/cand-123/documents \
+     -H "x-user-id: user-1" \
+     -H "x-workspace-id: workspace-1" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "documentType": "resume",
+       "fileName": "john_doe_resume.pdf",
+       "rawText": "John Doe\nSoftware Engineer\n\nExperience:\n- 5 years as full-stack developer\n- Led team of 3 engineers\n- Built microservices architecture\n\nSkills: TypeScript, NestJS, React, PostgreSQL, AWS"
+     }'
+   ```
+   
+   Response includes `summaryId` (save this for later).
+
+5. **Request summary generation:**
+   ```bash
+   curl -X POST http://localhost:3000/candidates/cand-123/summaries/generate \
+     -H "x-user-id: user-1" \
+     -H "x-workspace-id: workspace-1"
+   ```
+   
+   Response: `{ "id": "summary-id", "status": "pending", ... }`
+
+6. **Process pending summaries (trigger worker):**
+   ```bash
+   curl -X POST http://localhost:3000/workers/candidate-summaries
+   ```
+   
+   This processes all pending jobs in the queue. Gemini API is called here.
+
+7. **Check the summary result:**
+   ```bash
+   curl -X GET http://localhost:3000/candidates/cand-123/summaries/summary-id \
+     -H "x-user-id: user-1" \
+     -H "x-workspace-id: workspace-1"
+   ```
+   
+   Response now includes:
+   - `status: "completed"`
+   - `score: 85` (LLM assessment)
+   - `strengths: ["Strong technical background", ...]`
+   - `concerns: ["Limited management experience"]`
+   - `summary: "Solid engineer with leadership potential"`
+   - `recommendedDecision: "advance"`
+
+**Without Gemini API key:** The service uses fake provider (returns mock data). Useful for testing without API calls.
 
 ## Run Tests
 

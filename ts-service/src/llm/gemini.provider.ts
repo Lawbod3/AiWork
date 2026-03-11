@@ -28,7 +28,7 @@ export class GeminiProvider implements SummarizationProvider {
         throw new Error('GEMINI_API_KEY is not configured');
       }
 
-      const model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = this.buildPrompt(input);
 
