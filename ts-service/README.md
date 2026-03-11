@@ -129,13 +129,56 @@ To enable real LLM-powered summary generation:
 2. Add to `.env`:
    ```
    GEMINI_API_KEY=your_api_key_here
-   NODE_ENV=production
    ```
 3. Restart the service
 
-**Without Gemini API key:** The service uses a fake provider (returns mock summaries). Tests always use the fake provider.
+**Without Gemini API key:** The service uses a fake provider (returns mock summaries).
+
+**With Gemini API key:** Real summaries are generated using Google Gemini API.
+
+**Tests:** Always use the fake provider (no external API calls).
 
 **Note:** Do not commit API keys to git. Use `.env` file (already in .gitignore).
+
+## LLM Provider Documentation
+
+### Provider Used
+**Google Gemini API** (gemini-1.5-flash model)
+
+### Configuration
+- **Environment Variable:** `GEMINI_API_KEY`
+- **Setup:** Get free API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **Local Development:** Add key to `.env` file (optional - fake provider used if not set)
+- **Production:** Set `GEMINI_API_KEY` environment variable
+
+### How It Works
+1. Candidate documents are sent to Gemini API with a structured prompt
+2. Gemini analyzes documents and returns JSON with:
+   - `score` (0-100): Overall candidate assessment
+   - `strengths` (array): Key strengths identified
+   - `concerns` (array): Potential concerns
+   - `summary` (string): Professional summary
+   - `recommendedDecision` (advance/hold/reject): Recommendation
+3. Response is validated and stored in database
+4. Status transitions: pending → completed (or failed on error)
+
+### Assumptions & Limitations
+- **Prompt Language:** English only
+- **Document Size:** Handles typical resumes/cover letters (< 10KB per document)
+- **Response Format:** Expects valid JSON from Gemini
+- **Error Handling:** Failed API calls mark summary as failed (not retried automatically)
+- **Rate Limiting:** Subject to Gemini API free tier limits
+- **Fallback:** If API fails or key is missing, fake provider returns mock data
+
+### Testing
+- **Unit Tests:** Use `FakeSummarizationProvider` (no API calls)
+- **Integration Tests:** Use `FakeSummarizationProvider` (no API calls)
+- **Manual Testing:** Set `GEMINI_API_KEY` to test real Gemini integration
+
+### Provider Implementation
+- **Real:** `src/llm/gemini.provider.ts` - Calls Gemini API
+- **Fake:** `src/llm/fake-summarization.provider.ts` - Returns mock data
+- **Selection:** Automatic based on `GEMINI_API_KEY` presence
 
 ## Run Migrations
 

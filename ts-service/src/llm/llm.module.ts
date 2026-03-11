@@ -11,8 +11,8 @@ import { SUMMARIZATION_PROVIDER } from './summarization-provider.interface';
     {
       provide: SUMMARIZATION_PROVIDER,
       useFactory: () => {
-        // Use Gemini in production if API key is set, otherwise use fake
-        const useGemini = process.env.GEMINI_API_KEY && process.env.NODE_ENV === 'production';
+        // Use Gemini if API key is provided, otherwise use fake provider
+        const useGemini = !!process.env.GEMINI_API_KEY;
         return useGemini ? new GeminiProvider() : new FakeSummarizationProvider();
       },
     },
