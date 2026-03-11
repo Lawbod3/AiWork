@@ -140,10 +140,39 @@ To enable real LLM-powered summary generation:
 
 **Note:** Do not commit API keys to git. Use `.env` file (already in .gitignore).
 
+### ⚠️ Common Gemini Setup Issues
+
+**Problem:** Getting 404 errors like "models/gemini-1.5-flash is not found"
+
+**Cause:** Google frequently updates model names. Older model names may no longer work.
+
+**Solution:** We use `gemini-2.5-flash` which is the current working model (as of March 2026).
+
+**If you get model errors:**
+1. Check what models are available with your API key:
+   ```bash
+   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY"
+   ```
+2. Update the model name in `src/llm/gemini.provider.ts`:
+   ```typescript
+   const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+   ```
+3. Restart the service
+
+**Current working models (March 2026):**
+- `gemini-2.5-flash` ✅ (recommended - fast and reliable)
+- `gemini-2.5-pro` ✅ (more capable but slower)
+- `gemini-flash-latest` ✅ (always latest flash model)
+
+**Deprecated models that may not work:**
+- ❌ `gemini-1.5-flash` (old version)
+- ❌ `gemini-pro` (old version)
+- ❌ `gemini-1.5-pro` (old version)
+
 ## LLM Provider Documentation
 
 ### Provider Used
-**Google Gemini API** (gemini-1.5-flash model)
+**Google Gemini API** (gemini-2.5-flash model)
 
 ### Configuration
 - **Environment Variable:** `GEMINI_API_KEY`
@@ -162,12 +191,20 @@ To enable real LLM-powered summary generation:
 3. Response is validated and stored in database
 4. Status transitions: pending → completed (or failed on error)
 
+### Model Selection
+We use `gemini-2.5-flash` because:
+- ✅ Fast response times (good for async processing)
+- ✅ High quality analysis for candidate evaluation
+- ✅ Reliable availability (current stable model)
+- ✅ Cost-effective for high-volume processing
+
 ### Assumptions & Limitations
 - **Prompt Language:** English only
 - **Document Size:** Handles typical resumes/cover letters (< 10KB per document)
 - **Response Format:** Expects valid JSON from Gemini
 - **Error Handling:** Failed API calls mark summary as failed (not retried automatically)
 - **Rate Limiting:** Subject to Gemini API free tier limits
+- **Model Updates:** Google may deprecate models - check documentation if errors occur
 - **Fallback:** If API fails or key is missing, fake provider returns mock data
 
 ### Testing
@@ -179,6 +216,12 @@ To enable real LLM-powered summary generation:
 - **Real:** `src/llm/gemini.provider.ts` - Calls Gemini API
 - **Fake:** `src/llm/fake-summarization.provider.ts` - Returns mock data
 - **Selection:** Automatic based on `GEMINI_API_KEY` presence
+
+### Troubleshooting
+If you get "model not found" errors:
+1. Check available models: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"`
+2. Update model name in `gemini.provider.ts`
+3. Restart service
 
 ## Run Migrations
 
@@ -297,6 +340,32 @@ To test the complete workflow with real LLM summaries:
    - `recommendedDecision: "advance"`
 
 **Without Gemini API key:** The service uses fake provider (returns mock data). Useful for testing without API calls.
+
+### Troubleshooting Gemini Issues
+
+**If step 6 fails with "model not found" errors:**
+
+1. **Check your API key works:**
+   ```bash
+   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY"
+   ```
+
+2. **If you see available models, update the model name:**
+   - Edit `src/llm/gemini.provider.ts`
+   - Change the model name to one from the list (e.g., `gemini-2.5-flash`)
+   - Restart the service
+
+3. **Common working models (as of March 2026):**
+   - `gemini-2.5-flash` (recommended)
+   - `gemini-flash-latest` (always latest)
+   - `gemini-2.5-pro` (more capable)
+
+4. **If no models work:**
+   - Your API key might be restricted
+   - Try creating a new API key
+   - Check if billing is enabled (some models require it)
+
+**The fake provider always works** - use it to test the complete workflow without API dependencies.
 
 ## Run Tests
 
