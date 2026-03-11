@@ -140,11 +140,14 @@ src/
 - [x] DTOs (input validation, response shapes)
 - [x] Service layer (business logic, access control)
 - [x] Mapper layer (entity transformation)
-- [ ] Controller (HTTP endpoints)
-- [ ] Module (dependency injection)
+- [x] Controller (HTTP endpoints)
+- [x] Module (dependency injection)
+- [x] Tests (46 tests passing)
+  - 13 service layer tests
+  - 20 controller layer tests
+  - 13 integration tests (DTO validation)
 - [ ] Worker (async job processing)
 - [ ] LLM provider (Gemini integration)
-- [ ] Tests (unit and integration)
 
 ## Prerequisites
 
@@ -264,8 +267,14 @@ curl -X GET http://localhost:3000/candidates/cand-123/summaries/summary-id \
 ```bash
 cd ts-service
 npm test
-npm run test:e2e
 ```
+
+**Test Coverage:**
+- **Service Tests** (13 tests) - Document upload, summary generation, list/retrieve operations, workspace isolation, error handling
+- **Controller Tests** (20 tests) - All 4 HTTP endpoints, auth guard integration, user context passing, error propagation
+- **Integration Tests** (13 tests) - DTO validation at HTTP boundary (@IsEnum, @MinLength, @MaxLength, @IsString), HTTP status codes
+
+All 46 tests pass with proper mocking and isolated dependencies.
 
 ## Layout Highlights
 

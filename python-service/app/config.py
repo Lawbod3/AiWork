@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+psycopg://assessment_user:assessment_pass@localhost:5432/assessment_db"
+    database_url: str = "sqlite:///./briefing.db"
     app_env: str = "development"
     app_port: int = 8000
 
