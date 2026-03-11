@@ -377,3 +377,376 @@ This runs all 46 tests:
 - 13 service tests (upload, summary generation, list/retrieve)
 - 20 controller tests (HTTP endpoints, auth, error handling)
 - 13 integration tests (DTO validation, status codes)
+
+## Production Deployment
+
+### Docker Containerization
+
+**Dockerfile:**
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "start:prod"]
+```
+
+**Build and run:**
+```bash
+docker build -t talentflow-ts .
+docker run -p 3000:3000 -e DATABASE_URL=postgres://... talentflow-ts
+```
+
+### Environment Configuration
+
+**Development:**
+```bash
+NODE_ENV=development
+DATABASE_URL=sqlite:./talentflow.db
+GEMINI_API_KEY=optional
+LOG_LEVEL=debug
+```
+
+**Production:**
+```bash
+NODE_ENV=production
+DATABASE_URL=postgres://user:pass@host:5432/db
+GEMINI_API_KEY=required_for_real_summaries
+LOG_LEVEL=info
+PORT=3000
+```
+
+**Staging:**
+```bash
+NODE_ENV=staging
+DATABASE_URL=postgres://staging_user:pass@staging-host:5432/staging_db
+GEMINI_API_KEY=staging_key
+LOG_LEVEL=warn
+```
+
+### Kubernetes Deployment
+
+**deployment.yaml:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talentflow-ts
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: talentflow-ts
+  template:
+    metadata:
+      labels:
+        app: talentflow-ts
+    spec:
+      containers:
+      - name: talentflow-ts
+        image: talentflow-ts:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: url
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gemini-secret
+              key: api-key
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+### Health Checks
+
+The service exposes health endpoints for monitoring:
+- `GET /health` - Basic health check
+- `GET /health/detailed` - Database connectivity check
+
+## API Documentation
+
+### OpenAPI/Swagger
+
+Access interactive API documentation at:
+- **Local:** http://localhost:3000/api/docs
+- **Staging:** https://staging-api.talentflow.com/docs
+- **Production:** https://api.talentflow.com/docs
+
+### API Versioning
+
+Current API version: `v1`
+
+All endpoints are prefixed with `/api/v1/`:
+```
+POST /api/v1/candidates/:id/documents
+POST /api/v1/candidates/:id/summaries/generate
+GET  /api/v1/candidates/:id/summaries
+GET  /api/v1/candidates/:id/summaries/:summaryId
+```
+
+### Authentication Headers
+
+All requests require workspace context:
+```bash
+curl -H "x-user-id: user-123" \
+     -H "x-workspace-id: workspace-456" \
+     https://api.talentflow.com/api/v1/candidates/123/documents
+```
+
+### Error Responses
+
+Standard error format:
+```json
+{
+  "error": "Validation failed",
+  "message": "Document type must be one of: resume, cover_letter, portfolio, other",
+  "statusCode": 400,
+  "timestamp": "2026-03-11T14:30:00.000Z",
+  "path": "/api/v1/candidates/123/documents"
+}
+```
+
+### Rate Limiting
+
+- **Development:** No limits
+- **Production:** 1000 requests/hour per workspace
+- **Burst:** 100 requests/minute
+
+Rate limit headers included in responses:
+```
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1678550400
+```
+
+## Monitoring & Observability
+
+### Structured Logging
+
+**Log Format:**
+```json
+{
+  "timestamp": "2026-03-11T14:30:00.000Z",
+  "level": "info",
+  "message": "Summary generation completed",
+  "context": "SummaryGenerationWorker",
+  "metadata": {
+    "summaryId": "summary-123",
+    "candidateId": "candidate-456",
+    "workspaceId": "workspace-789",
+    "provider": "gemini",
+    "duration": 2340
+  }
+}
+```
+
+**Log Levels:**
+- `error` - System errors, failed operations
+- `warn` - Validation failures, rate limits
+- `info` - Successful operations, status changes
+- `debug` - Detailed execution flow (dev only)
+
+### Metrics Collection
+
+**Key Metrics:**
+- Request rate and response times
+- Summary generation success/failure rates
+- Queue depth and processing times
+- Database connection pool usage
+- LLM API response times and costs
+
+**Prometheus Metrics:**
+```
+# Request metrics
+http_requests_total{method="POST",route="/candidates/:id/documents",status="201"}
+http_request_duration_seconds{method="POST",route="/candidates/:id/documents"}
+
+# Business metrics
+summary_generation_total{provider="gemini",status="completed"}
+summary_generation_duration_seconds{provider="gemini"}
+queue_jobs_pending{type="candidate-summary"}
+
+# System metrics
+database_connections_active
+database_query_duration_seconds
+memory_usage_bytes
+```
+
+### Error Tracking
+
+**Sentry Integration:**
+```bash
+# Environment variables
+SENTRY_DSN=https://your-dsn@sentry.io/project-id
+SENTRY_ENVIRONMENT=production
+SENTRY_RELEASE=v1.2.3
+```
+
+**Error Context:**
+- User ID and workspace ID
+- Request ID for tracing
+- Stack traces and breadcrumbs
+- Custom tags for filtering
+
+### Distributed Tracing
+
+**OpenTelemetry Integration:**
+- Trace ID propagation across services
+- Span creation for major operations
+- Database query tracing
+- External API call tracing (Gemini)
+
+**Trace Example:**
+```
+Trace ID: 1234567890abcdef
+├── HTTP Request [POST /candidates/123/documents]
+├── Database Insert [candidate_documents]
+├── File Write [uploads/doc-456.txt]
+└── Response [201 Created]
+```
+
+### Alerting Rules
+
+**Critical Alerts:**
+- Service down (health check failures)
+- Database connection failures
+- High error rate (>5% in 5 minutes)
+- Queue processing delays (>10 minutes)
+
+**Warning Alerts:**
+- High response times (>2s p95)
+- LLM API failures (>10% in 15 minutes)
+- Disk space usage (>80%)
+- Memory usage (>85%)
+
+## Development Workflow
+
+### Code Quality Standards
+
+**ESLint Configuration:**
+```bash
+npm run lint          # Check code style
+npm run lint:fix      # Auto-fix issues
+npm run format        # Prettier formatting
+```
+
+**TypeScript Strict Mode:**
+- No implicit any
+- Strict null checks
+- No unused variables
+- Consistent return types
+
+### Pre-commit Hooks
+
+**Husky + lint-staged setup:**
+```json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,js}": ["eslint --fix", "prettier --write"],
+    "*.{json,md}": ["prettier --write"]
+  }
+}
+```
+
+**Commit Message Format:**
+```
+type(scope): description
+
+feat(auth): add workspace-based access control
+fix(queue): handle worker connection failures
+docs(api): update endpoint documentation
+test(service): add integration tests for summaries
+```
+
+### Branch Protection Rules
+
+**Main Branch Requirements:**
+- Pull request required
+- At least 2 approving reviews
+- All status checks must pass
+- Branch must be up to date
+- No force pushes allowed
+
+**Status Checks:**
+- ✅ Tests pass (54 tests)
+- ✅ Linting passes
+- ✅ Type checking passes
+- ✅ Security scan passes
+- ✅ Build succeeds
+
+### Automated Testing in CI/CD
+
+**GitHub Actions Workflow:**
+```yaml
+name: CI/CD Pipeline
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm test
+      - run: npm run build
+      
+      - name: Security Audit
+        run: npm audit --audit-level=high
+      
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+```
+
+**Test Coverage Requirements:**
+- Minimum 80% line coverage
+- Minimum 70% branch coverage
+- All new features must include tests
+- Integration tests for API endpoints
+
+### Database Migration Strategy
+
+**Migration Workflow:**
+1. Create migration: `npm run migration:create AddNewFeature`
+2. Write up/down scripts
+3. Test locally: `npm run migration:run`
+4. Review in PR
+5. Deploy to staging first
+6. Monitor and deploy to production
+
+**Migration Best Practices:**
+- Always include rollback (down) scripts
+- Test migrations on production-like data
+- Use transactions for atomic changes
+- Document breaking changes
+- Coordinate with dependent services
