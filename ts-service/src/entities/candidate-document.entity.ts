@@ -32,7 +32,7 @@ export class CandidateDocument {
   @Column({ name: 'raw_text', type: 'text' })
   rawText!: string;
 
-  @CreateDateColumn({ name: 'uploaded_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'uploaded_at', type: 'datetime' })
   uploadedAt!: Date;
 
   @ManyToOne(() => SampleCandidate, { onDelete: 'CASCADE' })

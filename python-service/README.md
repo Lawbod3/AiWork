@@ -16,9 +16,9 @@ This service includes:
 
 - Python 3.12
 
-The application uses **SQLite for local development**, so no external database setup is needed. Just Python and the dependencies in `requirements.txt`.
+**No Docker or external database required.** The application uses SQLite for local development.
 
-## Setup
+## Quick Start (Local Development)
 
 ```bash
 cd python-service
@@ -26,13 +26,57 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
+python -m app.db.run_migrations up
+python -m uvicorn app.main:app --reload --port 8000
 ```
+
+That's it! The service will start on `http://localhost:8000` with SQLite.
+
+## Setup
+
+### Local Development (SQLite)
+
+SQLite is the default for local development. No setup needed beyond Python and pip.
+
+```bash
+cd python-service
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+python -m app.db.run_migrations up
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+The `.env` file defaults to SQLite:
+```
+DATABASE_URL=sqlite:///./briefing.db
+```
+
+This creates a `briefing.db` file in the python-service directory. No Docker, no external database, no user setup.
+
+### Production (PostgreSQL)
+
+For production, switch to PostgreSQL by updating `.env`:
+
+```bash
+# .env (production)
+DATABASE_URL=postgresql://user:password@host:5432/database_name
+```
+
+The application automatically detects PostgreSQL and uses the appropriate configuration.
+
+**Why SQLite for local, PostgreSQL for production?**
+- SQLite: Zero setup, instant testing, perfect for development
+- PostgreSQL: Scalable, production-grade, handles concurrent connections
 
 ## Environment
 
 `.env.example` includes:
 
-- `DATABASE_URL` - SQLite database URL (default: `sqlite:///./briefing.db`)
+- `DATABASE_URL` - Database connection string
+  - Local: `sqlite:///./briefing.db`
+  - Production: `postgresql://user:password@host:5432/db`
 - `APP_ENV` - Environment (development/production)
 - `APP_PORT` - Server port (default: 8000)
 

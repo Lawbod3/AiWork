@@ -50,10 +50,10 @@ export class CandidateSummary {
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage!: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 
   @ManyToOne(() => SampleCandidate, { onDelete: 'CASCADE' })

@@ -150,30 +150,64 @@ src/
 
 - Node.js 22+
 - npm
-- PostgreSQL running from repository root:
+
+**No Docker or external database required for local development.** The service uses SQLite by default.
+
+## Quick Start (Local Development)
 
 ```bash
-docker compose up -d postgres
+cd ts-service
+npm install
+npm run migration:run
+npm run start:dev
 ```
 
+That's it! The service will start on `http://localhost:3000` with SQLite.
+
 ## Setup
+
+### Local Development (SQLite)
+
+SQLite is the default for local development. No setup needed beyond npm install.
 
 ```bash
 cd ts-service
 npm install
 cp .env.example .env
+npm run migration:run
+npm run start:dev
 ```
 
-## Environment
+The `.env` file defaults to SQLite:
+```
+DATABASE_URL=sqlite:./talentflow.db
+```
 
-- `PORT`
-- `DATABASE_URL`
-- `NODE_ENV`
-- `GEMINI_API_KEY` (leave blank unless implementing a real provider)
+This creates a `talentflow.db` file in the ts-service directory. No Docker, no external database, no user setup.
 
-Do not commit API keys or secrets.
+### Production (PostgreSQL)
 
-Candidates may create a free Gemini API key through Google AI Studio for the full assessment implementation.
+For production, switch to PostgreSQL by updating `.env`:
+
+```bash
+# .env (production)
+DATABASE_URL=postgres://user:password@host:5432/database_name
+```
+
+The application automatically detects PostgreSQL and uses the appropriate configuration.
+
+**Why SQLite for local, PostgreSQL for production?**
+- SQLite: Zero setup, instant testing, perfect for development
+- PostgreSQL: Scalable, production-grade, handles concurrent connections
+
+## Environment Variables
+
+- `PORT` - Server port (default: 3000)
+- `DATABASE_URL` - Database connection string
+  - Local: `sqlite:./talentflow.db`
+  - Production: `postgres://user:password@host:5432/db`
+- `NODE_ENV` - Environment (development/production)
+- `GEMINI_API_KEY` - Google Gemini API key (for LLM features)
 
 ## Run Migrations
 
@@ -182,11 +216,47 @@ cd ts-service
 npm run migration:run
 ```
 
+Migrations run automatically on startup. This command is useful for manual verification.
+
 ## Run Service
 
 ```bash
 cd ts-service
 npm run start:dev
+```
+
+Service starts on `http://localhost:3000`
+
+## Test Endpoints
+
+All endpoints require auth headers:
+
+```bash
+# Upload a document
+curl -X POST http://localhost:3000/candidates/cand-123/documents \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documentType": "resume",
+    "fileName": "resume.pdf",
+    "rawText": "John Doe is a software engineer with 5 years of experience..."
+  }'
+
+# Request summary generation
+curl -X POST http://localhost:3000/candidates/cand-123/summaries/generate \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1"
+
+# List summaries
+curl -X GET http://localhost:3000/candidates/cand-123/summaries \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1"
+
+# Get single summary
+curl -X GET http://localhost:3000/candidates/cand-123/summaries/summary-id \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1"
 ```
 
 ## Run Tests
@@ -196,14 +266,6 @@ cd ts-service
 npm test
 npm run test:e2e
 ```
-
-## Fake Auth Headers
-
-Sample endpoints in this starter are protected by a fake local auth guard.
-Include these headers in requests:
-
-- `x-user-id`: any non-empty string (example: `user-1`)
-- `x-workspace-id`: workspace identifier used for scoping (example: `workspace-1`)
 
 ## Layout Highlights
 
