@@ -9,6 +9,7 @@ import { LlmModule } from './llm/llm.module';
 import { QueueModule } from './queue/queue.module';
 import { SampleModule } from './sample/sample.module';
 import { CandidatesModule } from './candidates/candidates.module';
+import { WorkersModule } from './controllers/workers/workers.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CandidatesModule } from './candidates/candidates.module';
     LlmModule,
     SampleModule,
     CandidatesModule,
+    WorkersModule,
   ],
 })
 export class AppModule {}
