@@ -119,7 +119,23 @@ The application automatically detects PostgreSQL and uses the appropriate config
   - Local: `sqlite:./talentflow.db`
   - Production: `postgres://user:password@host:5432/db`
 - `NODE_ENV` - Environment (development/production)
-- `GEMINI_API_KEY` - Google Gemini API key (for LLM features)
+- `GEMINI_API_KEY` - Google Gemini API key (for LLM summary generation)
+
+## Gemini API Setup (Optional)
+
+To enable real LLM-powered summary generation:
+
+1. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Add to `.env`:
+   ```
+   GEMINI_API_KEY=your_api_key_here
+   NODE_ENV=production
+   ```
+3. Restart the service
+
+**Without Gemini API key:** The service uses a fake provider (returns mock summaries). Tests always use the fake provider.
+
+**Note:** Do not commit API keys to git. Use `.env` file (already in .gitignore).
 
 ## Run Migrations
 
