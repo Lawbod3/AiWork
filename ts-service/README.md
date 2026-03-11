@@ -20,20 +20,102 @@ Building an async document intake and LLM-powered summary generation feature.
 
 Recruiters upload candidate documents (resumes, cover letters). The system stores them and generates structured summaries using an LLM, all asynchronously through a queue.
 
-### Architecture
+### Project Architecture & Structure
 
-**Layered design:**
-- API endpoints handle HTTP requests
-- Service layer enforces business logic and workspace access control
-- Repositories manage database operations
-- Queue service handles async jobs
-- LLM provider abstraction allows swapping providers
+This implementation demonstrates **enterprise-level layered architecture** with clear separation of concerns:
 
-**Key patterns:**
-- Workspace scoping - users only see their own data
-- Async processing - requests return immediately, jobs process in background
-- Provider abstraction - LLM logic behind an interface (easy to test with fakes)
-- Status tracking - pending → completed/failed
+```
+src/
+├── dto/                          # Data Transfer Objects (input/output validation)
+│   └── candidates/               # Feature-scoped DTOs
+│       ├── upload-document.dto.ts
+│       ├── candidate-document.response.ts
+│       └── candidate-summary.response.ts
+├── services/                     # Business logic layer
+│   └── candidates/
+│       └── candidates.service.ts
+├── utils/                        # Shared utilities
+│   └── candidates/
+│       └── mappers/              # Entity-to-DTO transformation
+│           └── candidate.mapper.ts
+├── controllers/                  # HTTP layer (to be added)
+├── entities/                     # Database models
+├── migrations/                   # Database versioning
+├── auth/                         # Authentication
+├── queue/                        # Async job processing
+├── llm/                          # LLM provider abstraction
+└── config/                       # Configuration
+```
+
+**Why this structure?**
+
+1. **Feature-scoped organization** - Each feature (candidates, query, etc.) has its own DTOs, services, and utilities. Easy to find related code.
+
+2. **Layered separation** - Each layer has a single responsibility:
+   - `dto/` - Input validation and response contracts
+   - `services/` - Business logic and data access
+   - `utils/` - Reusable transformations (mappers)
+   - `controllers/` - HTTP handling (coming next)
+
+3. **Scalability** - Adding new services is straightforward:
+   ```
+   src/
+   ├── dto/
+   │   ├── candidates/
+   │   └── query/              # New feature
+   ├── services/
+   │   ├── candidates/
+   │   └── query/              # New feature
+   └── utils/
+       ├── candidates/
+       └── query/              # New feature
+   ```
+
+4. **Testability** - Each layer can be tested independently:
+   - DTOs tested for validation rules
+   - Services tested with mocked dependencies
+   - Mappers tested for transformation logic
+
+5. **Maintainability** - Clear boundaries make code easier to understand and modify.
+
+### Architecture Layers Explained
+
+**DTO Layer** (`src/dto/candidates/`)
+- Validates incoming requests using class-validator decorators
+- Defines response shapes for API contracts
+- Prevents invalid data from reaching business logic
+- Hides internal fields from API responses
+
+**Service Layer** (`src/services/candidates/`)
+- Contains all business logic
+- Enforces workspace access control (multi-tenancy)
+- Manages database operations via repositories
+- Integrates with queue for async processing
+- Handles errors gracefully
+
+**Mapper Layer** (`src/utils/candidates/mappers/`)
+- Transforms database entities to DTOs
+- Handles JSON serialization/deserialization
+- Keeps transformation logic separate from services
+- Reusable across multiple services if needed
+
+**Controller Layer** (coming next)
+- Handles HTTP requests/responses
+- Extracts auth context from headers
+- Calls service methods
+- Returns appropriate HTTP status codes
+
+### Design Decisions
+
+**Why async processing?** Keeps API responsive. Users don't wait for LLM calls.
+
+**Why workspace scoping?** Multi-tenant system. Users can only access their own data.
+
+**Why provider abstraction?** Tests use fake provider (no external API calls). Easy to swap providers later.
+
+**Why separate tables?** Normalized design. Prevents data duplication. Easier to query.
+
+**Why layered architecture?** Enterprise pattern that scales. Each layer has one job. Easy to test, maintain, and extend.
 
 ### Database Schema
 
@@ -55,27 +137,14 @@ Recruiters upload candidate documents (resumes, cover letters). The system store
 - [x] Database migration (candidate_documents, candidate_summaries tables)
 - [x] TypeORM entities (CandidateDocument, CandidateSummary)
 - [x] TypeORM configuration (register entities and migrations)
-- [ ] DTOs (input validation, response shapes)
-- [ ] Service layer (business logic, access control)
+- [x] DTOs (input validation, response shapes)
+- [x] Service layer (business logic, access control)
+- [x] Mapper layer (entity transformation)
 - [ ] Controller (HTTP endpoints)
 - [ ] Module (dependency injection)
 - [ ] Worker (async job processing)
 - [ ] LLM provider (Gemini integration)
 - [ ] Tests (unit and integration)
-
-### Design Decisions
-
-**Why async processing?** Keeps API responsive. Users don't wait for LLM calls.
-
-**Why workspace scoping?** Multi-tenant system. Users can only access their own data.
-
-**Why provider abstraction?** Tests use fake provider (no external API calls). Easy to swap providers later.
-
-**Why separate tables?** Normalized design. Prevents data duplication. Easier to query.
-
----
-
-The assessment-specific candidate document and summary workflow is intentionally not implemented.
 
 ## Prerequisites
 
