@@ -1,86 +1,192 @@
-# InsightOps Python Service
+# Python Service - Briefing Report Generator
 
-FastAPI service for the backend assessment.
+FastAPI service that allows analysts to create, manage, and generate professional HTML briefing reports.
 
-This service includes:
+## Features
 
-- FastAPI app bootstrap and health endpoint
-- SQLAlchemy wiring
-- Manual SQL migration runner
-- **Briefing Report Generator feature** - Create, retrieve, and render professional HTML briefing reports
-- Sample items example feature
-- Jinja template wiring with professional report templates
-- Pytest setup
+- Create and manage investment briefings
+- Generate professional HTML reports
+- Normalized relational database design
+- Comprehensive input validation
+- 40 comprehensive tests
 
 ## Prerequisites
 
-- Python 3.12
+- **Python 3.12+**
+- **pip** (Python package manager)
 
-**No Docker or external database required.** The application uses SQLite for local development.
+**No Docker or external database required** - uses SQLite by default.
 
-## Quick Start (Local Development)
+## Quick Setup
 
 ```bash
+# Navigate to Python service
 cd python-service
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Setup environment
 cp .env.example .env
+
+# Run database migrations
 python -m app.db.run_migrations up
+
+# Start the service
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-That's it! The service will start on `http://localhost:8000` with SQLite.
+**Service available at:** http://localhost:8000
 
-## Setup
+## Database Configuration
 
-### Local Development (SQLite)
+### SQLite (Default - Recommended)
 
-SQLite is the default for local development. No setup needed beyond Python and pip.
+SQLite is used by default for local development:
 
 ```bash
-cd python-service
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-cp .env.example .env
-python -m app.db.run_migrations up
-python -m uvicorn app.main:app --reload --port 8000
-```
-
-The `.env` file defaults to SQLite:
-```
+# .env file (default)
 DATABASE_URL=sqlite:///./briefing.db
 ```
 
-This creates a `briefing.db` file in the python-service directory. No Docker, no external database, no user setup.
+**Benefits:**
+- Zero setup required
+- No external dependencies
+- Perfect for development and testing
+- Creates `briefing.db` file automatically
 
-### Production (PostgreSQL)
+### PostgreSQL (Production)
 
-For production, switch to PostgreSQL by updating `.env`:
+For production or testing with PostgreSQL:
 
 ```bash
-# .env (production)
-DATABASE_URL=postgresql://user:password@host:5432/database_name
+# Start PostgreSQL with Docker (from project root)
+docker-compose up -d
+
+# Update .env file
+DATABASE_URL=postgresql://assessment_user:assessment_password@localhost:5433/assessment_db
+
+# Run migrations and start service
+python -m app.db.run_migrations up
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-The application automatically detects PostgreSQL and uses the appropriate configuration.
+## Environment Variables
 
-**Why SQLite for local, PostgreSQL for production?**
-- SQLite: Zero setup, instant testing, perfect for development
-- PostgreSQL: Scalable, production-grade, handles concurrent connections
+Create `.env` file from example:
 
-## Environment
+```bash
+cp .env.example .env
+```
 
-`.env.example` includes:
-
+**Available variables:**
 - `DATABASE_URL` - Database connection string
-  - Local: `sqlite:///./briefing.db`
-  - Production: `postgresql://user:password@host:5432/db`
 - `APP_ENV` - Environment (development/production)
 - `APP_PORT` - Server port (default: 8000)
 
-The application uses SQLite for local development, making it easy to run without Docker or external database setup.
+## API Endpoints
+
+### Briefing Management
+- `POST /briefings` - Create a new briefing
+- `GET /briefings/{id}` - Retrieve a briefing
+- `GET /briefings` - List all briefings
+
+### Report Generation
+- `POST /briefings/{id}/generate` - Generate HTML report
+- `GET /briefings/{id}/html` - Get rendered HTML report
+
+### System
+- `GET /health` - Health check endpoint
+
+## Testing
+
+Run the complete test suite:
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run all tests
+python -m pytest
+
+# Run with verbose output
+python -m pytest -v
+
+# Run with coverage
+python -m pytest --cov=app tests/
+```
+
+**Test Coverage:** 40 tests across 4 test suites
+- Service layer tests (13 tests)
+- Formatter tests (7 tests)
+- API endpoint tests (11 tests)
+- Validation tests (7 tests)
+- Health/sample tests (2 tests)
+
+## Example Usage
+
+### Create a Briefing
+
+```bash
+curl -X POST http://localhost:8000/briefings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "companyName": "Acme Holdings",
+    "ticker": "ACME",
+    "sector": "Industrial Technology",
+    "analystName": "Jane Doe",
+    "summary": "Strong company with solid fundamentals and growth potential.",
+    "recommendation": "Buy - attractive valuation with strong execution track record.",
+    "keyPoints": [
+      "Revenue grew 18% year-over-year in latest quarter",
+      "Management raised full-year guidance",
+      "Enterprise subscriptions now 62% of recurring revenue"
+    ],
+    "risks": [
+      "Top two customers account for 41% of total revenue",
+      "International expansion may pressure margins"
+    ],
+    "metrics": [
+      {"name": "Revenue Growth", "value": "18%"},
+      {"name": "Operating Margin", "value": "22.4%"},
+      {"name": "P/E Ratio", "value": "28.1x"}
+    ]
+  }'
+```
+
+### Generate HTML Report
+
+```bash
+# Generate report for briefing ID 1
+curl -X POST http://localhost:8000/briefings/1/generate
+
+# Get the HTML report
+curl http://localhost:8000/briefings/1/html
+```
+
+## Project Structure
+
+```
+python-service/
+├── app/
+│   ├── api/              # API endpoints
+│   ├── db/               # Database configuration and migrations
+│   ├── models/           # SQLAlchemy ORM models
+│   ├── schemas/          # Pydantic request/response schemas
+│   ├── services/         # Business logic layer
+│   ├── templates/        # Jinja2 HTML templates
+│   └── main.py          # FastAPI application
+├── db/migrations/        # SQL migration files
+├── tests/               # Test suite
+├── requirements.txt     # Python dependencies
+└── .env.example        # Environment template
+```
 
 ## Run Migrations (Manual SQL Runner)
 

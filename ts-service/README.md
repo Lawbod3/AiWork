@@ -1,144 +1,221 @@
-# TalentFlow TypeScript Service Starter
+# TypeScript Service - Candidate Document Intake
 
-NestJS starter service for the backend assessment.
+NestJS service that handles candidate document intake and generates AI-powered summaries using Google's Gemini API.
 
-This service includes:
+## Features
 
-- Nest bootstrap with global validation
-- TypeORM + migration setup
-- Fake auth context (`x-user-id`, `x-workspace-id`)
-- Tiny workspace-scoped sample module
-- Queue abstraction module
-- LLM provider abstraction with a fake summarization provider
-- Jest test setup
-
-## Part B: Candidate Document Intake + Summary Workflow
-
-Building an async document intake and LLM-powered summary generation feature.
-
-### What We're Building
-
-Recruiters upload candidate documents (resumes, cover letters). The system stores them and generates structured summaries using an LLM, all asynchronously through a queue.
-
-### Project Structure
-
-```
-src/
-├── dto/candidates/               # Input/output validation
-├── services/candidates/          # Business logic
-├── utils/candidates/mappers/     # Entity transformation
-├── controllers/candidates/       # HTTP endpoints
-├── entities/                     # Database models
-├── migrations/                   # Database versioning
-├── auth/                         # Authentication
-├── queue/                        # Async job processing
-├── llm/                          # LLM provider abstraction
-└── config/                       # Configuration
-```
-
-**Why this structure?** Each feature has its own DTOs, services, and utilities. Easy to find related code and add new features.
-
-### API Endpoints
-
-- `POST /candidates/:candidateId/documents` - Upload document
-- `POST /candidates/:candidateId/summaries/generate` - Request summary generation
-- `GET /candidates/:candidateId/summaries` - List summaries
-- `GET /candidates/:candidateId/summaries/:summaryId` - Get single summary
-
-### Implementation Status
-
-- [x] Database migration
-- [x] TypeORM entities
-- [x] DTOs with validation
-- [x] Service layer (business logic, workspace scoping)
-- [x] Mapper layer (entity transformation)
-- [x] Controller (HTTP endpoints)
-- [x] Module (dependency injection)
-- [x] Tests (54 tests passing)
-- [x] Worker (async job processing)
-- [x] LLM provider (Gemini integration)
+- Upload candidate documents (resumes, cover letters)
+- Async AI-powered summary generation
+- Workspace-based access control
+- Real Google Gemini LLM integration
+- 54 comprehensive tests
 
 ## Prerequisites
 
-- Node.js 22+
-- npm
+- **Node.js 18+**
+- **npm** (Node package manager)
 
-**No Docker or external database required for local development.** The service uses SQLite by default.
+**No Docker or external database required** - uses SQLite by default.
 
-## Quick Start (Local Development)
-
-```bash
-cd ts-service
-npm install
-npm run migration:run
-npm run start:dev
-```
-
-That's it! The service will start on `http://localhost:3000` with SQLite.
-
-## Setup
-
-### Local Development (SQLite)
-
-SQLite is the default for local development. No setup needed beyond npm install.
+## Quick Setup
 
 ```bash
+# Navigate to TypeScript service
 cd ts-service
+
+# Install dependencies
 npm install
+
+# Setup environment
 cp .env.example .env
+
+# Run database migrations
 npm run migration:run
+
+# Start the service
 npm run start:dev
 ```
 
-The `.env` file defaults to SQLite:
-```
+**Service available at:** http://localhost:3000
+
+## Database Configuration
+
+### SQLite (Default - Recommended)
+
+SQLite is used by default for local development:
+
+```bash
+# .env file (default)
 DATABASE_URL=sqlite:./talentflow.db
 ```
 
-This creates a `talentflow.db` file in the ts-service directory. No Docker, no external database, no user setup.
+**Benefits:**
+- Zero setup required
+- No external dependencies
+- Perfect for development and testing
+- Creates `talentflow.db` file automatically
 
-### Production (PostgreSQL)
+### PostgreSQL (Production)
 
-For production, switch to PostgreSQL by updating `.env`:
+For production or testing with PostgreSQL:
 
 ```bash
-# .env (production)
-DATABASE_URL=postgres://user:password@host:5432/database_name
+# Start PostgreSQL with Docker (from project root)
+docker-compose up -d
+
+# Update .env file
+DATABASE_URL=postgres://assessment_user:assessment_password@localhost:5433/assessment_db
+
+# Run migrations and start service
+npm run migration:run
+npm run start:dev
 ```
-
-The application automatically detects PostgreSQL and uses the appropriate configuration.
-
-**Why SQLite for local, PostgreSQL for production?**
-- SQLite: Zero setup, instant testing, perfect for development
-- PostgreSQL: Scalable, production-grade, handles concurrent connections
 
 ## Environment Variables
 
-- `PORT` - Server port (default: 3000)
+Create `.env` file from example:
+
+```bash
+cp .env.example .env
+```
+
+**Available variables:**
 - `DATABASE_URL` - Database connection string
-  - Local: `sqlite:./talentflow.db`
-  - Production: `postgres://user:password@host:5432/db`
+- `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment (development/production)
-- `GEMINI_API_KEY` - Google Gemini API key (for LLM summary generation)
+- `GEMINI_API_KEY` - Google Gemini API key (optional)
 
-## Gemini API Setup (Optional)
+## Gemini AI Integration (Optional)
 
-To enable real LLM-powered summary generation:
+To enable real AI-powered summary generation:
 
-1. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Add to `.env`:
+### Get API Key
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Create a new API key
+3. Add to `.env` file:
    ```
    GEMINI_API_KEY=your_api_key_here
    ```
-3. Restart the service
 
-**Without Gemini API key:** The service uses a fake provider (returns mock summaries).
+### Behavior
+- **With API key**: Real AI summaries using Google Gemini
+- **Without API key**: Mock summaries for testing
+- **Tests**: Always use mock provider (no external API calls)
 
-**With Gemini API key:** Real summaries are generated using Google Gemini API.
+## API Endpoints
 
-**Tests:** Always use the fake provider (no external API calls).
+### Document Management
+- `POST /candidates/{candidateId}/documents` - Upload document
+- `GET /candidates/{candidateId}/documents` - List documents
 
-**Note:** Do not commit API keys to git. Use `.env` file (already in .gitignore).
+### Summary Generation
+- `POST /candidates/{candidateId}/summaries/generate` - Request AI summary
+- `GET /candidates/{candidateId}/summaries` - List summaries
+- `GET /candidates/{candidateId}/summaries/{summaryId}` - Get summary
+
+### Worker Operations
+- `POST /workers/candidate-summaries` - Process pending summaries
+
+### System
+- `GET /health` - Health check endpoint
+
+**Authentication:** All endpoints require headers:
+- `x-user-id: user-123`
+- `x-workspace-id: workspace-456`
+
+## Testing
+
+Run the complete test suite:
+
+```bash
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:cov
+
+# Run specific test file
+npm test -- candidates.service.spec.ts
+```
+
+**Test Coverage:** 54 tests across multiple suites
+- Unit tests (33 tests) - Service and controller logic
+- Integration tests (13 tests) - HTTP endpoints and validation
+- Worker tests (8 tests) - Async job processing
+
+## Example Usage
+
+### Complete Workflow
+
+**Note:** Candidate IDs are just identifiers - you can use any string (like `cand-123`, `candidate-456`, etc.). Candidates are created automatically when you upload their first document. No separate candidate creation step is needed.
+
+```bash
+# 1. Upload a document (this creates the candidate automatically)
+curl -X POST http://localhost:3000/candidates/cand-123/documents \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documentType": "resume",
+    "fileName": "john_doe_resume.pdf",
+    "rawText": "John Doe - Senior Software Engineer with 5 years experience in TypeScript, NestJS, and React. Led team of 3 engineers building microservices architecture."
+  }'
+
+# 2. Request summary generation
+curl -X POST http://localhost:3000/candidates/cand-123/summaries/generate \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1"
+
+# 3. Process pending summaries (trigger worker)
+curl -X POST http://localhost:3000/workers/candidate-summaries
+
+# 4. Get the generated summary
+curl -X GET http://localhost:3000/candidates/cand-123/summaries \
+  -H "x-user-id: user-1" \
+  -H "x-workspace-id: workspace-1"
+```
+
+### Expected AI Summary Response
+
+```json
+{
+  "id": "summary-123",
+  "candidateId": "cand-123",
+  "status": "completed",
+  "score": 85,
+  "strengths": [
+    "Strong technical leadership experience",
+    "Relevant technology stack expertise",
+    "Team management skills"
+  ],
+  "concerns": [
+    "Limited experience with large-scale systems"
+  ],
+  "summary": "Solid senior engineer with leadership potential and relevant technical skills",
+  "recommendedDecision": "advance",
+  "provider": "gemini",
+  "createdAt": "2026-03-11T14:30:00.000Z"
+}
+```
+
+## Project Structure
+
+```
+ts-service/
+├── src/
+│   ├── controllers/      # HTTP endpoints
+│   ├── services/         # Business logic
+│   ├── dto/             # Request/response validation
+│   ├── entities/        # Database models
+│   ├── migrations/      # Database versioning
+│   ├── llm/            # AI provider abstraction
+│   ├── queue/          # Async job processing
+│   ├── auth/           # Authentication
+│   └── config/         # Configuration
+├── test/               # Test suite
+├── package.json        # Dependencies
+└── .env.example       # Environment template
+```
 
 ### ⚠️ Common Gemini Setup Issues
 
